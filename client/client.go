@@ -90,7 +90,7 @@ func (c *Client) Receive() {
 				}
 
 				if req.Command == "PROMPT" {
-					fmt.Fprint(os.Stdin, "\r"+req.Data+" ")
+					fmt.Fprint(os.Stdin, req.Data+" ")
 				}
 			}
 
