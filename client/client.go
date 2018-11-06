@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/midgarco/dice_game/game"
 	"github.com/midgarco/dice_game_socket/io"
@@ -51,6 +52,8 @@ func (c Client) SendResponse(cat string, msg *io.Response) {
 }
 
 func (c Client) SendRequest(msg *io.Request) {
+	time.Sleep(10 * time.Millisecond)
+
 	b, err := json.Marshal(msg)
 	if err != nil {
 		fmt.Fprintf(os.Stdout, "error marshaling json response: %v", err)
@@ -69,43 +72,53 @@ func (c *Client) Receive() {
 		}
 		if length > 0 {
 			msg = bytes.Trim(msg, "\x00")
+			fmt.Println(string(msg))
 
-			command := string(msg[:bytes.IndexAny(msg, " ")])
+			space := bytes.IndexAny(msg, " ")
+			if space < 0 {
+				continue
+			}
+
+			command := string(msg[:space])
 
 			if command == "REQ" {
-				data := &io.Request{}
-				err := json.Unmarshal(msg[bytes.IndexAny(msg, " ")+1:], data)
+				req := &io.Request{}
+				err := json.Unmarshal(msg[space+1:], req)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("unmarshal request: %v", err)
 					continue
+				}
+
+				if req.Command == "PROMPT" {
+					fmt.Fprint(os.Stdin, "\r"+req.Data+" ")
 				}
 			}
 
 			if command == "RESP" {
-				data := &io.Response{}
-				err := json.Unmarshal(msg[bytes.IndexAny(msg, " ")+1:], data)
+				resp := &io.Response{}
+				err := json.Unmarshal(msg[space+1:], resp)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("unmarshal response: %v", err)
 					continue
 				}
 
-				switch strings.ToUpper(data.Group) {
+				switch strings.ToUpper(resp.Group) {
 				case "CLIENT":
 					fmt.Println("successfully connected")
-					err := json.Unmarshal([]byte(data.Message), c)
+					err := json.Unmarshal([]byte(resp.Message), c)
 					if err != nil {
-						fmt.Println(err)
+						fmt.Printf("unmarshal message: %v", err)
 					}
 				case "GAME":
-					switch strings.ToUpper(data.Message) {
+					switch strings.ToUpper(resp.Message) {
 					case "UPDATE":
 						fmt.Println("updating game data")
-						c.Game = data.GameData
+						c.Game = resp.GameData
 					}
 				case "ERROR":
-					fmt.Println(data.Message)
+					fmt.Printf("response error message: %v", resp.Message)
 				case "FATAL":
-					fmt.Println(data.Message)
+					fmt.Printf("response fatal message: %v", resp.Message)
 					c.Socket.Close()
 					break
 				default:

@@ -79,6 +79,7 @@ func (cm *ClientManager) Receive(c *client.Client) {
 				c.HandleError(err)
 				continue
 			}
+
 			switch req.Command {
 			case "GAME":
 				if len(req.Action) == 0 {
@@ -94,8 +95,7 @@ func (cm *ClientManager) Receive(c *client.Client) {
 
 					resp := &io.Response{Message: "UPDATE", GameData: cm.games[gid]}
 					c.SendResponse("GAME", resp)
-
-					c.SendRequest(&io.Request{Command: "GAME", Action: "PROMPT", Data: "How many players?"})
+					c.SendRequest(&io.Request{Command: "PROMPT", Action: "PLAYERS", Data: "How many players?"})
 				default:
 					c.HandleError(fmt.Errorf("GAME unknown command %s", req.Action))
 				}
