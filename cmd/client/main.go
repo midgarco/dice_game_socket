@@ -25,6 +25,10 @@ func main() {
 		msg, _ := r.ReadString('\n')
 		msg = strings.TrimRight(msg, "\n")
 
+		if len(c.Prompt) > 0 {
+			msg = c.Prompt + " " + msg
+			c.Prompt = ""
+		}
 		req := io.CreateRequest(msg)
 		b, err := json.Marshal(req)
 		if err != nil {

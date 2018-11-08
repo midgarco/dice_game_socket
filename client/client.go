@@ -18,6 +18,7 @@ type Client struct {
 	Socket net.Conn
 	Data   chan []byte
 	Game   *game.Game
+	Prompt string
 }
 
 func (c *Client) MarshalJSON() ([]byte, error) {
@@ -85,12 +86,13 @@ func (c *Client) Receive() {
 				req := &io.Request{}
 				err := json.Unmarshal(msg[space+1:], req)
 				if err != nil {
-					fmt.Printf("unmarshal request: %v", err)
+					fmt.Printf("unmarshal request: %v\n", err)
 					continue
 				}
 
 				if req.Command == "PROMPT" {
-					fmt.Fprint(os.Stdin, req.Data+" ")
+					fmt.Print(req.Data + " ")
+					c.Prompt = "GAME PLAYERS"
 				}
 			}
 
@@ -98,7 +100,7 @@ func (c *Client) Receive() {
 				resp := &io.Response{}
 				err := json.Unmarshal(msg[space+1:], resp)
 				if err != nil {
-					fmt.Printf("unmarshal response: %v", err)
+					fmt.Printf("unmarshal response: %v\n", err)
 					continue
 				}
 
@@ -107,7 +109,7 @@ func (c *Client) Receive() {
 					fmt.Println("successfully connected")
 					err := json.Unmarshal([]byte(resp.Message), c)
 					if err != nil {
-						fmt.Printf("unmarshal message: %v", err)
+						fmt.Printf("unmarshal message: %v\n", err)
 					}
 				case "GAME":
 					switch strings.ToUpper(resp.Message) {
@@ -116,9 +118,9 @@ func (c *Client) Receive() {
 						c.Game = resp.GameData
 					}
 				case "ERROR":
-					fmt.Printf("response error message: %v", resp.Message)
+					fmt.Printf("response error message: %v\n", resp.Message)
 				case "FATAL":
-					fmt.Printf("response fatal message: %v", resp.Message)
+					fmt.Printf("response fatal message: %v\n", resp.Message)
 					c.Socket.Close()
 					break
 				default:
